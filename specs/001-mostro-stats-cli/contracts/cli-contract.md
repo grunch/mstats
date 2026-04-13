@@ -127,7 +127,6 @@ Printed to stdout as a single valid JSON object. Structure:
       "source_event_ids": ["evt_id_1", "..."]
     }
   ],
-  "unjoined_count": 54,
   "data_quality": {
     "processed": 1234,
     "joined": 1180,
