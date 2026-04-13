@@ -38,7 +38,7 @@ Build `mstats`, a Rust CLI tool that analyzes Mostro P2P trading activity by fet
 | Principle | Gate | Status |
 |-----------|------|--------|
 | I. Correctness Over Cleverness | All statistics derived from real events, traceable to event IDs | ✅ PASS — data-model.md confirms join-based aggregation; unjoined events excluded from aggregates |
-| II. Single Canonical Data Source (v1) | Relay hardcoded to `wss://relay.mostro.network` | ✅ PASS — contracts show single `--relay` flag with default; no multi-relay logic |
+| II. Single Canonical Data Source (v1) | Relay hardcoded to `wss://relay.mostro.network` | ✅ PASS — contracts show relay URL hardcoded in `config.rs` with no user-overridable flag; no multi-relay logic. Relay override is explicitly out-of-scope for v1. |
 | III. Small and Maintainable CLI-First Design | Flat module layout, minimal deps, no frameworks | ✅ PASS — 9 source modules, no DB, no UI; flat structure aids auditability |
 | IV. Transparent Handling of Incomplete Data | Unjoined events and errors reported explicitly | ✅ PASS — `UnjoinedRecord` and `errors` array in output contract; error paths to stderr |
 | V. Human and Machine Readable Output | Two output modes: tabular + JSON | ✅ PASS — Both output contracts defined with consistent data shape |

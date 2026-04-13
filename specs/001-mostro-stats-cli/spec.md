@@ -106,7 +106,13 @@ A developer or analyst pipes the tool's JSON output into another script or tool 
 - **FR-001**: The tool MUST fetch kind 8383 development fee events from `wss://relay.mostro.network`.
 - **FR-002**: The tool MUST extract the `order-id` tag from each kind 8383 event.
 - **FR-003**: For each extracted order ID, the tool MUST fetch the corresponding kind 38383 order event from the same relay, matched by the kind 38383 event's `d` tag equal to the order ID.
-- **FR-004**: The tool MUST join kind 8383 and kind 38383 events by order ID.
+- **FR-004**: The tool MUST join kind 8383 and kind 38383 events by order ID *only after* the author-pubkey verification in FR-004a succeeds.
+- **FR-004a**: **Author pubkey verification (mandatory).** Before joining a kind 8383 event (with `order-id = X`) and a kind 38383 event (with `d = X`), the tool MUST verify that both events have identical, well-formed author pubkeys. The exact behavior is:
+  - **Match**: both pubkeys present, well-formed (32-byte hex, 64 lowercase hex chars after normalization), and byte-equal → the pair is joined and attributed to that single node.
+  - **Mismatch**: both pubkeys present and well-formed but not equal → the pair MUST NOT be joined; the two events are treated as belonging to distinct nodes, the kind 8383 event contributes to its own node's stats only if a separately-published kind 38383 event from the same author also matches `order-id`, otherwise the kind 8383 event is recorded as an unjoined event with reason `pubkey_mismatch`. The kind 38383 event is ignored for fee/volume aggregation (kind 8383 remains the entry point per existing scope).
+  - **Missing**: either event lacks an author pubkey → the pair MUST NOT be joined; the kind 8383 event is recorded as unjoined with reason `pubkey_missing`.
+  - **Malformed**: either pubkey fails well-formedness validation → the pair MUST NOT be joined; the kind 8383 event is recorded as unjoined with reason `pubkey_malformed`.
+  - In all non-match cases the tool MUST surface the mismatch in the unjoined-events report (see FR-017) including both event IDs and both observed pubkeys (or the reason the pubkey was unusable). Implementations MUST NOT have a code path that joins an 8383/38383 pair without executing this verification.
 - **FR-005**: The tool MUST compute global (network-wide) statistics across all observed Mostro nodes.
 - **FR-006**: The tool MUST compute per-node statistics, where a node is identified by the author pubkey of the kind 8383 event.
 - **FR-007**: Per-node reports MUST display the node pubkey and the second value of the `y` tag from the kind 8383 event when available.
@@ -138,7 +144,7 @@ A developer or analyst pipes the tool's JSON output into another script or tool 
 - **Kind 8383 Event (Development Fee)**: A Nostr event representing a development fee payment made by a Mostro node to the Mostro development fund. Contains an `order-id` tag linking it to a specific order, and a `y` tag whose second value provides additional node identification. The author pubkey of this event identifies the Mostro node. Protocol reference: <https://mostro.network/protocol/other_events.html#development-fee>
 - **Kind 38383 Event (Order)**: A Nostr event representing a Mostro order. Identified by its `d` tag (which matches the `order-id` from the corresponding kind 8383 event). Contains total order amount in sats, fiat currency code, fiat amount, and order side (buy/sell). Protocol reference: <https://mostro.network/protocol/order_event.html>
 - **Mostro Node**: An independent Mostro operator identified by the author pubkey of the kind 8383 events they publish. All nodes publish events to Nostr; the tool observes and aggregates across them.
-- **Joined Order Record**: The result of joining a kind 8383 event with its corresponding kind 38383 event by matching the `order-id` tag to the `d` tag. Contains fee data, order amount, fiat details, node pubkey, `y` tag value, and order side.
+- **Joined Order Record**: The result of joining a kind 8383 event with its corresponding kind 38383 event by matching the `order-id` tag to the `d` tag **and** verifying the author pubkeys are identical per FR-004a. Contains fee data, order amount, fiat details, the single verified node pubkey, `y` tag value, and order side. A pair that fails the pubkey verification step never becomes a Joined Order Record.
 
 ## Success Criteria *(mandatory)*
 
@@ -146,7 +152,7 @@ A developer or analyst pipes the tool's JSON output into another script or tool 
 
 - **SC-001**: Users can run the CLI and receive complete global and per-node statistics reports within 60 seconds for up to 10,000 kind 8383 events on the relay.
 - **SC-002**: 100% of reported statistics are traceable to specific source event IDs — zero inferred or fabricated numbers.
-- **SC-003**: The tool correctly joins kind 8383 and kind 38383 events for all matching pairs — verified by cross-referencing a random sample of 50 joined records against raw relay data with 100% accuracy.
+- **SC-003**: The tool correctly joins kind 8383 and kind 38383 events for all matching pairs — verified by cross-referencing a random sample of 50 joined records against raw relay data with 100% accuracy. The verification sample MUST include at least one synthetic/known pubkey-mismatch case and one pubkey-missing case, and the tool MUST reject both per FR-004a; any joined record produced from a pair with differing author pubkeys counts as a test failure.
 - **SC-004**: When data is incomplete (unjoined events, missing tags, relay errors), the tool explicitly reports the gap in output — verified by test scenarios with known incomplete data.
 - **SC-005**: JSON output is valid and parseable by standard JSON tools in 100% of successful runs.
 - **SC-006**: The tool exits cleanly (status 0) with "no data" message when zero matching events exist, and exits with non-zero status on total relay failure.
@@ -155,9 +161,9 @@ A developer or analyst pipes the tool's JSON output into another script or tool 
 
 ## Assumptions
 
-- The relay `wss://relay.mostro.network` is accessible and contains a representative set of kind 8383 and kind 38383 events for the target analysis period.
-- The author pubkey of a kind 8383 event with `order-id = X` probably corresponds to the same Mostro node that published the kind 38383 event with `d = X` but we need ALWAYS to verify if the pubkey is the same in both events.
-- The `order-id` tag in kind 8383 events uses a consistent format that can be matched against the `d` tag in kind 38383 events.
+- The relay `wss://relay.mostro.network` is accessible and contains a representative set of kind 8383 and kind 38383 events for the target analysis period. Any relay-accessibility verification step (e.g., smoke-test queries) MUST exercise at least one pair of joined events so the author-pubkey verification path (FR-004a) is actually traversed and cannot be silently skipped.
+- For any kind 8383 event whose `order-id` tag equals `X` and any kind 38383 event whose `d` tag equals `X`, the tool MUST verify that the two events share the identical author pubkey before attributing both events to the same Mostro node. If the pubkeys differ, the events MUST be treated as belonging to distinct nodes and the pair MUST NOT be joined into a single record for aggregation purposes.
+- The `order-id` tag in kind 8383 events MUST use a consistent format that can be matched byte-for-byte against the `d` tag in kind 38383 events; mismatches on format (not just value) are treated the same as a missing counterpart.
 - Users have basic familiarity with running CLI tools and interpreting tabular/statistical output.
 - No authentication or authorization is required to query events from the relay for v1.
 - The analysis period (date range) defaults to all available events when no date filter is specified.

@@ -52,11 +52,9 @@ Connects to `wss://relay.mostro.network`, fetches all kind 8383 events, joins wi
 ./target/release/mstats --json --from 2026-01-01 --currency USD --side sell
 ```
 
-### Custom relay (for testing)
+### Relay configuration
 
-```bash
-./target/release/mstats --relay wss://test-relay.example.com
-```
+The relay URL is hardcoded to `wss://relay.mostro.network` in v1. There is no `--relay` override flag; relay override is out-of-scope for v1 (see FR-019 and Constitution Principle II).
 
 ## Run Tests
 

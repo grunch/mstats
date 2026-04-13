@@ -33,9 +33,7 @@ No positional arguments. All configuration is via flags.
 
 ### Connection
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--relay` | WebSocket URL | `wss://relay.mostro.network` | Relay URL (override default for testing) |
+The relay URL is hardcoded to `wss://relay.mostro.network` in v1 (per FR-019 and Constitution Principle II). There is no user-overridable relay flag; relay override is explicitly out-of-scope for v1.
 
 ## Exit Codes
 
@@ -151,8 +149,7 @@ Error: Invalid date format for --from: "2026-13-01" is not a valid date
 
 ## Validation Rules
 
-- `--from` and `--to` accept ISO 8601 date strings (e.g., `2026-01-01`) or raw Unix timestamps. If the value is a date string without time, it is interpreted as midnight UTC of that date (`--from` inclusive start, `--to` inclusive end).
+- `--from` and `--to` accept ISO 8601 date strings (e.g., `2026-01-01`) or raw Unix timestamps. Date-only values (no time component) are interpreted with differing semantics to produce the expected whole-day filtering behavior: `--from` is interpreted as midnight UTC of that date (inclusive start), while `--to` is interpreted as midnight UTC of the *next* day (exclusive upper bound) — so `--to 2026-01-01` matches everything up to but not including `2026-01-02T00:00:00Z`, covering the entire day of 2026-01-01. Values that include an explicit time are used as-is.
 - `--node` must be a valid hex-encoded 32-byte pubkey (64 hex characters). Invalid values produce exit code 2.
 - `--currency` accepts any string; the tool does not validate against a currency registry (unknown currencies simply match nothing).
 - `--side` must be exactly `buy` or `sell` (case-insensitive). Invalid values produce exit code 2.
-- `--relay` must be a valid WebSocket URL (`ws://` or `wss://` scheme). Invalid URLs produce exit code 2.
