@@ -42,8 +42,13 @@ pub fn parse_order_event(ev: &NostrEvent) -> Result<OrderEvent, String> {
         find_tag_value(&ev.tags, "d").ok_or_else(|| format!("Missing d tag in event {}", ev.id))?;
 
     let amount_sats = find_tag_value(&ev.tags, "amt")
-        .and_then(|v| v.parse::<u64>().ok())
-        .ok_or_else(|| format!("Missing or non-numeric amt in order event {}", ev.id))?;
+        .and_then(|v| v.parse::<u64>().ok().filter(|&n| n > 0))
+        .ok_or_else(|| {
+            format!(
+                "Missing, non-numeric, or non-positive amt in order event {}",
+                ev.id
+            )
+        })?;
 
     let fiat_currency = find_tag_value(&ev.tags, "f").map(|v| v.to_uppercase());
     let fiat_amount = find_tag_value(&ev.tags, "fa").and_then(|v| v.parse::<f64>().ok());
@@ -151,6 +156,18 @@ mod tests {
     #[test]
     fn parse_38383_missing_d() {
         let ev = make_38383(vec![vec!["amt".into(), "500".into()]]);
+        assert!(parse_order_event(&ev).is_err());
+    }
+
+    #[test]
+    fn parse_38383_zero_amt() {
+        let ev = make_38383(vec![
+            vec!["d".into(), "order-1".into()],
+            vec!["amt".into(), "0".into()],
+            vec!["f".into(), "usd".into()],
+            vec!["fa".into(), "50.0".into()],
+            vec!["k".into(), "buy".into()],
+        ]);
         assert!(parse_order_event(&ev).is_err());
     }
 }

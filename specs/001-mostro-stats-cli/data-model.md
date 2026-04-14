@@ -195,6 +195,6 @@ All active filters are AND-composed.
 2. Fetch raw kind 38383 events from the relay
 3. Parse kind 38383 events to OrderEvents using the standard Mostro order tags (`d`, `amt`, `f`, `fa`, `k`); normalize `fiat_currency` to uppercase
 4. Join by `DevFeeEvent.order_id == OrderEvent.d_tag` → produce JoinedOrderRecords + UnjoinedRecords (unmatched → counted as **unmatched**)
-6. Apply filters → filtered JoinedOrderRecords
-7. Aggregate → GlobalStats + Vec<NodeStats>
-8. Format → ReportOutput (human-readable or JSON) with invariant `processed == joined + unmatched + skipped`
+5. Apply filters → filtered JoinedOrderRecords
+6. Aggregate → GlobalStats + Vec<NodeStats>
+7. Format → ReportOutput (human-readable or JSON) with invariant `processed == joined + unmatched + skipped`
