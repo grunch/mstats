@@ -5,6 +5,7 @@ use nostr_sdk::prelude::*;
 
 const WINDOW_LIMIT: usize = 500;
 const LOOKBACK_WINDOW_SECS: u64 = 7 * 24 * 60 * 60;
+const MAX_EMPTY_WINDOWS: usize = 8;
 
 use crate::config::Config;
 use crate::models::NostrEvent;
@@ -67,6 +68,7 @@ impl RelayClient {
         let mut window_end = now;
         let mut by_id: HashMap<String, NostrEvent> = HashMap::new();
         let mut seen_ranges: HashSet<(u64, u64, usize)> = HashSet::new();
+        let mut consecutive_empty_windows = 0usize;
 
         loop {
             let window_start = window_end.saturating_sub(LOOKBACK_WINDOW_SECS);
@@ -89,15 +91,21 @@ impl RelayClient {
                 break;
             }
 
+            if batch_len == 0 {
+                consecutive_empty_windows += 1;
+            } else {
+                consecutive_empty_windows = 0;
+            }
+
             for event in batch.iter().cloned() {
                 by_id.entry(event.id.clone()).or_insert(event);
             }
 
-            if batch_len < WINDOW_LIMIT {
+            if window_start == 0 {
                 break;
             }
 
-            if window_start == 0 {
+            if consecutive_empty_windows >= MAX_EMPTY_WINDOWS {
                 break;
             }
 
