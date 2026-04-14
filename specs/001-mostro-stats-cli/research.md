@@ -27,7 +27,7 @@
 
 **Chosen**: Two-phase fetching with **batched** kind 38383 queries:
 1. Phase A: Query all kind 8383 events from the relay, extract order IDs and node pubkeys
-2. Phase B: Deduplicate order IDs (unique set) → single batched relay query for kind 38383 events filtering on `d` tags matching all unique order IDs
+2. Phase B: Fetch kind 38383 events using explicit `since`/`until` time windows, then match locally against the deduplicated set of `order_id` values extracted from kind 8383 events
 
 Kind 38383 fetching is **mandatory** — statistics cannot be produced without it.
 
