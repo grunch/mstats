@@ -29,7 +29,7 @@ pub fn join_events(
                 event_id: fee.event_id.clone(),
                 order_id: Some(fee.order_id.clone()),
                 pubkey: fee.pubkey.clone(),
-                y_tag_value: fee.y_tag_value.clone(),
+                name: fee.name.clone().unwrap_or_default(),
                 fee_amount_sats: Some(fee.fee_amount_sats),
                 reason: UnjoinReason::OrderNotFound,
             });
@@ -50,7 +50,7 @@ mod tests {
             pubkey: "aa".repeat(32),
             created_at: 1700000000,
             order_id: order_id.to_string(),
-            y_tag_value: None,
+            name: None,
             fee_amount_sats: amount,
         }
     }

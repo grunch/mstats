@@ -74,7 +74,7 @@ mod tests {
                 pubkey: pubkey.to_string(),
                 created_at,
                 order_id: "o1".to_string(),
-                y_tag_value: None,
+                name: None,
                 fee_amount_sats: 100,
             },
             order_event: OrderEvent {

@@ -22,7 +22,7 @@ pub struct DevFeeEvent {
     pub pubkey: String,
     pub created_at: u64,
     pub order_id: String,
-    pub y_tag_value: Option<String>,
+    pub name: Option<String>,
     pub fee_amount_sats: u64,
 }
 
@@ -95,7 +95,7 @@ pub struct UnjoinedRecord {
     pub event_id: String,
     pub order_id: Option<String>,
     pub pubkey: String,
-    pub y_tag_value: Option<String>,
+    pub name: String,
     pub fee_amount_sats: Option<u64>,
     pub reason: UnjoinReason,
 }
@@ -105,7 +105,7 @@ pub struct UnjoinedRecord {
 #[derive(Debug, Clone)]
 pub struct NodeKey {
     pub pubkey: String,
-    pub y_tag_value: Option<String>,
+    pub name: String,
 }
 
 // ── Per-node stats ─────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ pub struct NodeStats {
     pub volume_by_side: HashMap<String, u64>,
     pub source_event_ids: Vec<String>,
     #[serde(skip)]
-    pub _last_y_tag_created_at: u64,
+    pub _last_name_created_at: u64,
 }
 
 /// Serialisable form of NodeKey (avoids deriving Serialize on the real type
@@ -129,14 +129,14 @@ pub struct NodeStats {
 #[derive(Debug, Clone, Serialize)]
 pub struct NodeKeySerde {
     pub pubkey: String,
-    pub y_tag_value: Option<String>,
+    pub name: String,
 }
 
 impl From<&NodeKey> for NodeKeySerde {
     fn from(nk: &NodeKey) -> Self {
         NodeKeySerde {
             pubkey: nk.pubkey.clone(),
-            y_tag_value: nk.y_tag_value.clone(),
+            name: nk.name.clone(),
         }
     }
 }
