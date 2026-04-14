@@ -43,7 +43,7 @@ pub fn print_human_readable(report: &ReportOutput) {
     if !report.nodes.is_empty() {
         println!("\n--- Per-Node Statistics ---\n");
         for ns in &report.nodes {
-            println!("Node: {}{}", ns.node.pubkey, format_y(&ns.node.y_tag_value));
+            println!("Node: {}{}", ns.node.pubkey, format_name(&ns.node.name));
             println!("  Orders:              {}", format_number(ns.order_count));
             println!(
                 "  Total Dev Fees:      {} sats",
@@ -124,10 +124,11 @@ fn format_fiat(amount: f64) -> String {
     }
 }
 
-fn format_y(y: &Option<String>) -> String {
-    match y {
-        Some(v) => format!("  (y: {})", v),
-        None => String::new(),
+fn format_name(name: &str) -> String {
+    if name.is_empty() {
+        String::new()
+    } else {
+        format!("  (name: {})", name)
     }
 }
 

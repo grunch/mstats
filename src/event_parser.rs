@@ -5,7 +5,7 @@ use crate::models::{DevFeeEvent, NostrEvent, OrderEvent, OrderSide};
 /// Extracts:
 /// - `order-id` tag → order_id
 /// - `amount` tag → fee_amount_sats (integer satoshis)
-/// - `y` tag 2nd value → y_tag_value
+/// - `y` tag 3rd value → name
 /// - event pubkey, created_at
 pub fn parse_dev_fee_event(ev: &NostrEvent) -> Result<DevFeeEvent, String> {
     let order_id = find_tag_value(&ev.tags, "order-id")
@@ -15,14 +15,19 @@ pub fn parse_dev_fee_event(ev: &NostrEvent) -> Result<DevFeeEvent, String> {
         .and_then(|v| v.parse::<u64>().ok())
         .ok_or_else(|| format!("Missing or non-numeric amount tag in event {}", ev.id))?;
 
-    let y_tag_value = find_tag_value_at_index(&ev.tags, "y", 1);
+    let mut name = find_tag_value_at_index(&ev.tags, "y", 2);
+    if let Some(ref s) = name {
+        if s.trim().is_empty() {
+            name = None;
+        }
+    }
 
     Ok(DevFeeEvent {
         event_id: ev.id.clone(),
         pubkey: ev.pubkey.clone(),
         created_at: ev.created_at,
         order_id,
-        y_tag_value,
+        name,
         fee_amount_sats,
     })
 }
@@ -113,16 +118,40 @@ mod tests {
         let ev = make_8383(vec![
             vec!["order-id".into(), "order-1".into()],
             vec!["amount".into(), "500".into()],
+            vec!["y".into(), "mostro".into(), "Node Alpha".into()],
         ]);
         let parsed = parse_dev_fee_event(&ev).unwrap();
         assert_eq!(parsed.order_id, "order-1");
         assert_eq!(parsed.fee_amount_sats, 500);
+        assert_eq!(parsed.name, Some("Node Alpha".to_string()));
     }
 
     #[test]
     fn parse_8383_missing_order_id() {
         let ev = make_8383(vec![vec!["amount".into(), "100".into()]]);
         assert!(parse_dev_fee_event(&ev).is_err());
+    }
+
+    #[test]
+    fn parse_8383_blank_y_name_is_none() {
+        let ev = make_8383(vec![
+            vec!["order-id".into(), "order-1".into()],
+            vec!["amount".into(), "500".into()],
+            vec!["y".into(), "mostro".into(), "".into()],
+        ]);
+        let parsed = parse_dev_fee_event(&ev).unwrap();
+        assert_eq!(parsed.name, None);
+    }
+
+    #[test]
+    fn parse_8383_whitespace_y_name_is_none() {
+        let ev = make_8383(vec![
+            vec!["order-id".into(), "order-1".into()],
+            vec!["amount".into(), "500".into()],
+            vec!["y".into(), "mostro".into(), "   ".into()],
+        ]);
+        let parsed = parse_dev_fee_event(&ev).unwrap();
+        assert_eq!(parsed.name, None);
     }
 
     #[test]

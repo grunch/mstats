@@ -58,7 +58,7 @@ pub fn aggregate(
         let entry = node_map.entry(rec.node_pubkey.clone()).or_insert_with(|| {
             let nk = NodeKey {
                 pubkey: rec.node_pubkey.clone(),
-                y_tag_value: rec.fee_event.y_tag_value.clone(),
+                name: rec.fee_event.name.clone().unwrap_or_default(),
             };
             let ns = NodeStats {
                 node: NodeKeySerde::from(&nk),
@@ -69,7 +69,7 @@ pub fn aggregate(
                 fiat_volume_by_currency: HashMap::new(),
                 volume_by_side: HashMap::new(),
                 source_event_ids: Vec::new(),
-                _last_y_tag_created_at: 0,
+                _last_name_created_at: 0,
             };
             (nk, ns)
         });
@@ -101,20 +101,15 @@ pub fn aggregate(
                 rec.order_event.amount_sats;
         }
 
-        // Update y_tag_value: use value from most recently seen event (highest created_at)
-        if let Some(yv) = &rec.fee_event.y_tag_value {
+        // Update name: use value from most recently seen event (highest created_at)
+        if let Some(name) = &rec.fee_event.name {
             let last_created = rec.fee_event.created_at;
-            let should_update = match entry.0.y_tag_value.as_ref() {
-                None => true,
-                Some(_) => {
-                    // Compare with the latest known created_at for this node's y_tag
-                    rec.fee_event.created_at > entry.1._last_y_tag_created_at
-                }
-            };
+            let should_update =
+                entry.0.name.is_empty() || rec.fee_event.created_at > entry.1._last_name_created_at;
             if should_update {
-                entry.0.y_tag_value = Some(yv.clone());
-                entry.1._last_y_tag_created_at = last_created;
-                entry.1.node.y_tag_value = Some(yv.clone());
+                entry.0.name = name.clone();
+                entry.1._last_name_created_at = last_created;
+                entry.1.node.name = name.clone();
             }
         }
     }
@@ -165,7 +160,7 @@ mod tests {
                 pubkey: pubkey.to_string(),
                 created_at: 1700000000,
                 order_id: id.to_string(),
-                y_tag_value: None,
+                name: None,
                 fee_amount_sats: fee,
             },
             order_event: OrderEvent {
@@ -211,7 +206,7 @@ mod tests {
             event_id: "fx".to_string(),
             order_id: Some("ox".to_string()),
             pubkey: "aa".to_string(),
-            y_tag_value: None,
+            name: String::new(),
             fee_amount_sats: Some(100),
             reason: UnjoinReason::OrderNotFound,
         }];
